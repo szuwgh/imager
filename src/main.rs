@@ -5,11 +5,9 @@ mod utils;
 use clap::Parser;
 use cli::Create;
 
-/// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
 struct Opts {
-    /// Number of times to greet
     #[clap(subcommand)]
     subcmd: SubCommand,
 }
@@ -21,14 +19,6 @@ enum SubCommand {
     Run,
     Spec,
 }
-
-// #[derive(Parser, Debug)]
-// enum CommonCmd {
-//     Create,
-//     Start,
-//     Run,
-//     Spec,
-// }
 
 fn main() {
     let opts = Opts::parse();
