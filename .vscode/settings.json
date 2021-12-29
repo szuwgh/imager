@@ -1,0 +1,10 @@
+{
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust"
+    },
+    "rust-client.channel": "nightly-2021-12-05",
+    "rust-client.rustupPath": "$HOME/.cargo/bin/rustup",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "remote.autoForwardPortsSource": "output",
+}

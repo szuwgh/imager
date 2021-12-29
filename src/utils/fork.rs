@@ -1,3 +1,4 @@
+use crate::common::error::Error;
 use crate::oci::oci::Namespace;
 use anyhow::Result;
 use nix::sched::{clone, CloneFlags};
@@ -16,6 +17,7 @@ fn to_flags(namespace: &Namespace) -> CloneFlags {
     }
 }
 
+//克隆一个进程
 pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> Result<Pid> {
     const STACK_SIZE: usize = 4 * 1024 * 1024; // 4 MB
     let ref mut stack: [u8; STACK_SIZE] = [0; STACK_SIZE];
@@ -29,8 +31,8 @@ pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> R
         Some(flags) => flags,
         None => CloneFlags::empty(),
     };
-
-    clone(Box::new(func), stack, clone_flags, None)
+    let pid = clone(Box::new(func), stack, clone_flags, None)?;
+    Ok(pid)
 }
 
 pub fn fork_proc() {}
