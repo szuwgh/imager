@@ -3,22 +3,23 @@ use crate::oci::oci::Spec;
 use crate::utils::fs;
 use anyhow::Result;
 
-use std::{collections::HashMap, io::Write, path::PathBuf};
+use std::{collections::HashMap, io::Write, path::Path, path::PathBuf};
 pub struct Container {
     state: State,
     dir: PathBuf,
 }
 
 impl Container {
-    fn new(id: &str, pid: u64, bundle: PathBuf, dir: PathBuf) -> Self {
+    fn new(id: &str, pid: u64, bundle: PathBuf, dir: &Path) -> Self {
         Self {
             state: State::new(id, pid, bundle),
-            dir: dir,
+            dir: dir.to_path_buf(),
         }
     }
 
-    fn save(&self) {
-        self.state.save(self.dir);
+    fn save(self) -> Self {
+        self.state.save(self.dir.as_path());
+        self
     }
 }
 
@@ -30,7 +31,7 @@ pub struct ContainerBuilder {
 
 impl ContainerBuilder {
     fn new(container_id: String, bundle: PathBuf) -> Self {
-        let root_path = PathBuf::from("/var/run/rsrun");
+        let root_path = PathBuf::from("/var/run/smog");
         Self {
             container_id: container_id,
             bundle: bundle,
@@ -49,17 +50,18 @@ impl ContainerBuilder {
     }
 
     //创建容器文件夹
-    fn create_container_dir(&self) -> Result<()> {
+    fn create_container_dir(&self) -> Result<PathBuf> {
         let dir = self.root_path.join(&self.container_id);
-        fs::create_dir_all(dir)?;
-        Ok(())
+        fs::create_dir_all(&dir)?;
+        Ok(dir)
     }
 
-    fn build(self) -> Result<()> {
+    fn create(self) -> Result<()> {
         let s = self.load_spec();
         let container_dir = self.create_container_dir()?;
+        let mut container =
+            Container::new(&self.container_id, 0, self.bundle, &container_dir).save();
         Ok(())
-        // Container {}
     }
 
     fn with_root() {}
@@ -75,6 +77,13 @@ mod tests {
             .unwrap();
         println!("{:?}", s);
     }
-
-    fn test_create_container_status() {}
+    #[test]
+    fn test_create_container_status() {
+        ContainerBuilder::new(
+            "aabbcc".to_owned(),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")),
+        )
+        .create()
+        .unwrap();
+    }
 }

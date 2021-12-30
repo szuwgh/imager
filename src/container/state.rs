@@ -1,5 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::PathBuf;
 use std::{collections::HashMap, io::Write, path::Path};
 
@@ -43,6 +44,14 @@ impl State {
     }
 
     pub fn save(&self, container_dir: &Path) -> Result<()> {
+        let file = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .append(false)
+            .create(true)
+            .truncate(true)
+            .open(Self::state_file_path(container_dir))?;
+        serde_json::to_writer(file, self)?;
         Ok(())
     }
 }
