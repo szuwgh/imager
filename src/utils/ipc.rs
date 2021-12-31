@@ -5,6 +5,7 @@ use nix::{
     sys::{socket, uio},
     unistd::{close, read, write},
 };
+
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 use std::os::unix::prelude::RawFd;
@@ -79,7 +80,7 @@ where
     }
 }
 
-pub fn channel<T>() -> Result<(Writer<T>, Reader<T>)>
+pub fn new<T>() -> Result<(Writer<T>, Reader<T>)>
 where
     T: serde::de::DeserializeOwned + Serialize,
 {
@@ -101,14 +102,26 @@ where
     ))
 }
 
-struct NotityLister {}
+struct NotifyListener {}
+
+impl NotifyListener {
+    pub fn new(socket_path: &str) -> Result<NotifyListener> {
+        let raw_fd = socket::socket(
+            socket::AddressFamily::Unix,
+            socket::SockType::SeqPacket,
+            socket::SockFlag::SOCK_CLOEXEC,
+            None,
+        )?;
+        let sockaddr = SockAddr::new_unix()
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn test_ipc() {
-        let (w, r) = channel::<String>().unwrap();
+        let (w, r) = new::<String>().unwrap();
         let _ = std::thread::spawn(move || {
             std::thread::sleep_ms(1000);
             w.write("aa".to_owned()).unwrap();

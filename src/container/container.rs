@@ -61,12 +61,16 @@ impl ContainerBuilder {
         let container_dir = self.create_container_dir()?;
         let mut container =
             Container::new(&self.container_id, 0, self.bundle, &container_dir).save();
-
+        // let (w_ipc,r_ipc) = ipc::new
         Ok(())
     }
 
     fn with_root() {}
 }
+
+fn init_process() {}
+
+fn fork() {}
 
 #[cfg(test)]
 mod tests {
