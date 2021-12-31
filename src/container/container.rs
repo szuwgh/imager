@@ -57,10 +57,11 @@ impl ContainerBuilder {
     }
 
     fn create(self) -> Result<()> {
-        let s = self.load_spec();
+        let spec = self.load_spec();
         let container_dir = self.create_container_dir()?;
         let mut container =
             Container::new(&self.container_id, 0, self.bundle, &container_dir).save();
+
         Ok(())
     }
 

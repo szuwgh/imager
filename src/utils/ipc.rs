@@ -69,10 +69,8 @@ where
 
     pub fn read(&self) -> Result<T> {
         let size = self.peek()?;
-        println!("size : {}", size);
         let mut buf = vec![0u8; size as usize];
         let num = read(self.fd, &mut buf)?;
-        println!("num : {}", num);
         Ok(serde_json::from_slice(&buf[..num])?)
     }
 
@@ -102,6 +100,8 @@ where
         },
     ))
 }
+
+struct NotityLister {}
 
 #[cfg(test)]
 mod tests {
