@@ -3,13 +3,14 @@ use anyhow::bail;
 use anyhow::Result;
 use nix::{
     sys::{socket, uio},
-    unistd::{close, read, write},
+    unistd::{self, close, read, write},
 };
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::marker::PhantomData;
 use std::os::unix::prelude::RawFd;
 use std::path::Path;
+use std::path::PathBuf;
 
 fn put_uint32(dst: &mut [u8], n: u32) {
     let _ = dst[3];
@@ -102,17 +103,77 @@ where
     ))
 }
 
-struct NotifyListener {}
+struct NotifyListener {
+    fd: RawFd,
+    socket_path: PathBuf,
+}
 
 impl NotifyListener {
-    pub fn new(socket_path: &str) -> Result<NotifyListener> {
+    pub fn new(socket_path: &Path) -> Result<NotifyListener> {
         let raw_fd = socket::socket(
             socket::AddressFamily::Unix,
             socket::SockType::SeqPacket,
             socket::SockFlag::SOCK_CLOEXEC,
             None,
         )?;
-        let sockaddr = SockAddr::new_unix()
+        let sockaddr = socket::SockAddr::new_unix(socket_path)?;
+        socket::bind(raw_fd, &sockaddr)?;
+        socket::listen(raw_fd, 10)?;
+        Ok(NotifyListener {
+            fd: raw_fd,
+            socket_path: socket_path.to_path_buf(),
+        })
+    }
+
+    //
+    pub fn wait_container_start(&self) -> Result<()> {
+        let socket_fd = socket::accept(self.fd)?;
+        let mut buf = [0u8; 4];
+        let _ = read(socket_fd, &mut buf)?;
+        let mut buf1 = vec![0u8; read_u32(&buf) as usize];
+        let _ = read(socket_fd, &mut buf1)?;
+        let cmd = String::from_utf8(buf1)?;
+        println!("cmd:{}", cmd);
+        if cmd != "start" {
+            bail!("not start")
+        }
+        Ok(())
+    }
+
+    pub fn close(&self) -> Result<()> {
+        close(self.fd)?;
+        std::fs::remove_file(&self.socket_path)?;
+        Ok(())
+    }
+}
+
+struct NotifySocket {
+    fd: RawFd,
+}
+
+impl NotifySocket {
+    pub fn new(socket_path: &Path) -> Result<NotifySocket> {
+        let raw_fd = socket::socket(
+            socket::AddressFamily::Unix,
+            socket::SockType::SeqPacket,
+            socket::SockFlag::SOCK_CLOEXEC,
+            None,
+        )?;
+        let sockaddr = socket::SockAddr::new_unix(Path::new(socket_path))?;
+        socket::connect(raw_fd, &sockaddr)?;
+        Ok(NotifySocket { fd: raw_fd })
+    }
+
+    pub fn notify(&self, msg: &str) -> Result<()> {
+        let mut buf = [0u8; 4];
+        put_uint32(&mut buf, msg.len() as u32);
+        write(self.fd, &buf)?;
+        write(self.fd, msg.as_bytes())?;
+        Ok(())
+    }
+
+    pub fn close(&self) -> Result<()> {
+        Ok(close(self.fd)?)
     }
 }
 
@@ -131,5 +192,19 @@ mod tests {
         let s = r.read().unwrap();
         r.close().unwrap();
         println!("{}", s);
+    }
+
+    #[test]
+    fn test_notifysocket() {
+        let socket_path = Path::new("/opt/test.sock");
+        let mut notify_listener = NotifyListener::new(socket_path).unwrap();
+        let _ = std::thread::spawn(move || {
+            std::thread::sleep_ms(1000);
+            let notify_socket = NotifySocket::new(socket_path).unwrap();
+            notify_socket.notify("start").unwrap();
+            notify_socket.close().unwrap();
+        });
+        notify_listener.wait_container_start().unwrap();
+        notify_listener.close().unwrap();
     }
 }

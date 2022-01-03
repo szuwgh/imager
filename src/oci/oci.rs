@@ -9,6 +9,7 @@ use std::path::PathBuf;
 pub struct Spec {
     pub oci_version: String,
     pub root: Option<Root>,
+    pub linux: Option<Linux>,
 }
 
 impl Spec {
@@ -25,7 +26,13 @@ pub struct Root {
     pub readonly: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Linux {
+    pub namespaces: Option<Vec<Namespace>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Namespace {
     #[serde(rename = "type")]
     pub typ: String,

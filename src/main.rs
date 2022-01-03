@@ -6,6 +6,7 @@ mod opts;
 mod utils;
 use clap::Parser;
 use cli::Create;
+use opts::create;
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -26,8 +27,9 @@ fn main() {
     let opts = Opts::parse();
     println!("Hello {:?}!", opts.subcmd);
     match opts.subcmd {
-        SubCommand::Create(create) => {
-            println!("{:?}", create);
+        SubCommand::Create(c) => {
+            println!("{:?}", c);
+            create(c).unwrap();
         }
         SubCommand::Start => {}
         SubCommand::Run => {}

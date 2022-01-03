@@ -1,9 +1,10 @@
 use crate::common::error::Error;
 use crate::oci::oci::Namespace;
 use anyhow::Result;
+use libc::c_int;
 use nix::sched::{clone, CloneFlags};
+use nix::sys::signal::Signal;
 use nix::unistd::Pid;
-
 fn to_flags(namespace: &Namespace) -> CloneFlags {
     match namespace.typ.as_str() {
         "pid" => CloneFlags::CLONE_NEWPID,
@@ -31,7 +32,12 @@ pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> R
         Some(flags) => flags,
         None => CloneFlags::empty(),
     };
-    let pid = clone(Box::new(func), stack, clone_flags, None)?;
+    let pid = clone(
+        Box::new(func),
+        stack,
+        clone_flags,
+        None, //Some(Signal::SIGCHLD as c_int
+    )?;
     Ok(pid)
 }
 

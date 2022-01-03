@@ -1,7 +1,15 @@
 use super::state::State;
-use crate::oci::oci::Spec;
+use crate::oci::oci::{Namespace, Spec};
+use crate::utils::fork::clone_proc;
 use crate::utils::fs;
+use crate::utils::ipc;
+use crate::utils::ipc::Reader;
 use anyhow::Result;
+use nix::sys::wait::waitpid;
+use nix::unistd::execv;
+use nix::unistd::execvp;
+use nix::unistd::sethostname;
+use std::ffi::CString;
 
 use std::{collections::HashMap, io::Write, path::Path, path::PathBuf};
 pub struct Container {
@@ -57,20 +65,37 @@ impl ContainerBuilder {
     }
 
     fn create(self) -> Result<()> {
-        let spec = self.load_spec();
+        let spec = self.load_spec()?;
         let container_dir = self.create_container_dir()?;
         let mut container =
             Container::new(&self.container_id, 0, self.bundle, &container_dir).save();
-        // let (w_ipc,r_ipc) = ipc::new
+        let (w_ipc, r_ipc) = ipc::new::<String>()?;
+        let namespaces: Vec<Namespace> = match &spec.linux {
+            Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
+            None => Vec::new(),
+        };
+        let pid = clone_proc(|| init_process(&r_ipc), &namespaces)?;
+        waitpid(pid, None)?;
         Ok(())
     }
 
     fn with_root() {}
 }
 
-fn init_process() {}
-
-fn fork() {}
+fn init_process(r: &Reader<String>) -> isize {
+    println!("inside container");
+    sethostname("container").unwrap();
+    let mut args: Vec<CString> = Vec::new();
+    args.push(CString::new("/bin/bash").unwrap());
+    match execv(&CString::new("/bin/bash").unwrap(), &args) {
+        Ok(_) => (),
+        Err(err) => {
+            println!("[ERROR]: {}", err.to_string());
+            std::process::exit(1);
+        }
+    }
+    0
+}
 
 #[cfg(test)]
 mod tests {
