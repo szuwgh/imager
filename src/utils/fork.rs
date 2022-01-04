@@ -4,7 +4,8 @@ use anyhow::Result;
 use libc::c_int;
 use nix::sched::{clone, CloneFlags};
 use nix::sys::signal::Signal;
-use nix::unistd::Pid;
+use nix::unistd::{fork, Pid};
+
 fn to_flags(namespace: &Namespace) -> CloneFlags {
     match namespace.typ.as_str() {
         "pid" => CloneFlags::CLONE_NEWPID,
@@ -17,6 +18,8 @@ fn to_flags(namespace: &Namespace) -> CloneFlags {
         _ => panic!("unknown namespace {}", namespace.typ),
     }
 }
+
+pub fn fork_child<F: FnOnce() -> Result<()>>(f: F) -> Result<Pid> {}
 
 //克隆一个进程
 pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> Result<Pid> {
@@ -36,11 +39,7 @@ pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> R
         Box::new(func),
         stack,
         clone_flags,
-        None, //Some(Signal::SIGCHLD as c_int
+        None, // Some(Signal::SIGCHLD as c_int)
     )?;
     Ok(pid)
 }
-
-pub fn fork_proc() {}
-
-pub fn exec() {}

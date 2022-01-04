@@ -38,7 +38,7 @@ pub struct ContainerBuilder {
 }
 
 impl ContainerBuilder {
-    fn new(container_id: String, bundle: PathBuf) -> Self {
+    pub fn new(container_id: String, bundle: PathBuf) -> Self {
         let root_path = PathBuf::from("/var/run/smog");
         Self {
             container_id: container_id,
@@ -75,7 +75,7 @@ impl ContainerBuilder {
             None => Vec::new(),
         };
         let pid = clone_proc(|| init_process(&r_ipc), &namespaces)?;
-        waitpid(pid, None)?;
+        // waitpid(pid, None)?;
         Ok(())
     }
 
