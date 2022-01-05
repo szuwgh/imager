@@ -5,8 +5,8 @@ mod oci;
 mod opts;
 mod utils;
 use clap::Parser;
-use cli::Create;
-use opts::create;
+use cli::{Create, Start};
+use opts::{create, start};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -18,7 +18,7 @@ struct Opts {
 #[derive(Parser, Debug)]
 enum SubCommand {
     Create(Create),
-    Start,
+    Start(Start),
     Run,
     Spec,
 }
@@ -31,7 +31,9 @@ fn main() {
             println!("{:?}", c);
             create(c).unwrap();
         }
-        SubCommand::Start => {}
+        SubCommand::Start(s) => {
+            start(s).unwrap();
+        }
         SubCommand::Run => {}
         SubCommand::Spec => {}
     }

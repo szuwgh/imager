@@ -4,9 +4,9 @@ use anyhow::Result;
 use libc::c_int;
 use nix::sched::{clone, CloneFlags};
 use nix::sys::signal::Signal;
-use nix::unistd::{fork, Pid};
+use nix::unistd::{fork, ForkResult, Pid};
 
-fn to_flags(namespace: &Namespace) -> CloneFlags {
+fn to_clone_flags(namespace: &Namespace) -> CloneFlags {
     match namespace.typ.as_str() {
         "pid" => CloneFlags::CLONE_NEWPID,
         "network" | "net" => CloneFlags::CLONE_NEWNET,
@@ -19,27 +19,17 @@ fn to_flags(namespace: &Namespace) -> CloneFlags {
     }
 }
 
-pub fn fork_child<F: FnOnce() -> Result<()>>(f: F) -> Result<Pid> {}
-
-//克隆一个进程
-pub fn clone_proc(func: impl FnMut() -> isize, namespaces: &Vec<Namespace>) -> Result<Pid> {
-    const STACK_SIZE: usize = 4 * 1024 * 1024; // 4 MB
-    let ref mut stack: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-    let spec_namespaces = namespaces
-        .into_iter()
-        .map(|ns| to_flags(ns))
-        .reduce(|a, b| a | b);
-
-    let clone_flags = match spec_namespaces {
-        Some(flags) => flags,
-        None => CloneFlags::empty(),
-    };
-    let pid = clone(
-        Box::new(func),
-        stack,
-        clone_flags,
-        None, // Some(Signal::SIGCHLD as c_int)
-    )?;
-    Ok(pid)
+pub fn fork_child<F: FnOnce() -> Result<()>>(f: F) -> Result<Pid> {
+    match unsafe { fork()? } {
+        ForkResult::Parent { child } => Ok(child),
+        ForkResult::Child => {
+            let ret = if let Err(error) = f() {
+                println!("error:{}", error);
+                -1
+            } else {
+                0
+            };
+            std::process::exit(ret);
+        }
+    }
 }

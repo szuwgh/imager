@@ -103,7 +103,7 @@ where
     ))
 }
 
-struct NotifyListener {
+pub struct NotifyListener {
     fd: RawFd,
     socket_path: PathBuf,
 }
@@ -147,7 +147,7 @@ impl NotifyListener {
     }
 }
 
-struct NotifySocket {
+pub struct NotifySocket {
     fd: RawFd,
 }
 

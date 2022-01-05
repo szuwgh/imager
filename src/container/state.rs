@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use std::fs;
+use std::fs::{self, File};
 use std::path::PathBuf;
 use std::{collections::HashMap, io::Write, path::Path};
 
@@ -20,7 +20,7 @@ pub struct State {
     pub oci_version: String,
     pub id: String,
     pub status: Status,
-    pub pid: u64,
+    pub pid: i32,
     pub bundle: PathBuf,
     pub annotations: Option<HashMap<String, String>>,
 }
@@ -28,7 +28,7 @@ pub struct State {
 impl State {
     const OCI_VERSION: &'static str = "1.0.2";
     const STATE_FILE: &'static str = "state.json";
-    pub fn new(id: &str, pid: u64, bundle: PathBuf) -> Self {
+    pub fn new(id: &str, pid: i32, bundle: PathBuf) -> Self {
         Self {
             oci_version: Self::OCI_VERSION.to_string(),
             id: id.to_string(),
@@ -37,6 +37,13 @@ impl State {
             bundle: bundle,
             annotations: Some(HashMap::default()),
         }
+    }
+
+    pub fn load(container_dir: &Path) -> Result<State> {
+        let file_path = Self::state_file_path(container_dir);
+        let file = File::open(&file_path)?;
+        let state = serde_json::from_reader(&file)?;
+        Ok(state)
     }
 
     fn state_file_path(container_dir: &Path) -> PathBuf {
