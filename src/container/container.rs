@@ -130,7 +130,7 @@ fn init_process(
     w.write("ready".to_owned())?;
     notify_listener.wait_container_start()?;
     notify_listener.close()?;
-    do_exec("/bin/sh")?
+    do_exec("/bin/sh")?;
 
     Ok(())
 }
