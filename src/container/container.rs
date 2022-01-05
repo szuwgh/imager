@@ -12,7 +12,9 @@ use nix::unistd::execv;
 use nix::unistd::sethostname;
 use std::ffi::CString;
 use std::{path::Path, path::PathBuf};
-const SOCK_FILE: &'static str = "container.sock";
+
+const SOCK_FILE: &'static str = "smog.sock";
+
 pub struct ContainerInstance {
     state: State,
     dir: PathBuf,
@@ -103,7 +105,6 @@ impl Container {
             None => Vec::new(),
         };
         let pid = fork_child(|| init_process(&w_ipc, &notify_listener, &namespaces))?;
-        //waitpid(pid, None)?;
         let msg = r_ipc.read()?;
         if msg != "ready" {
             bail!("not ready");
@@ -113,7 +114,7 @@ impl Container {
         state.status = Status::Created;
         let container = ContainerInstance::new(state, &container_dir);
         container.save()?;
-
+        waitpid(pid, None)?;
         Ok(())
     }
 
@@ -125,13 +126,15 @@ fn init_process(
     notify_listener: &NotifyListener,
     namespaces: &Vec<Namespace>,
 ) -> Result<()> {
+    for v in namespaces.iter() {
+        println!("{:?}", v.typ);
+    }
     unshare(CloneFlags::CLONE_NEWUTS)?;
     sethostname("container")?;
     w.write("ready".to_owned())?;
     notify_listener.wait_container_start()?;
     notify_listener.close()?;
     do_exec("/bin/sh")?;
-
     Ok(())
 }
 

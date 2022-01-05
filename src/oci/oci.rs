@@ -35,8 +35,13 @@ pub struct Linux {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Namespace {
     #[serde(rename = "type")]
-    pub typ: String,
+    pub typ: NamespaceType,
     pub path: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum NamespaceType {
+    Mount,
 }
 
 #[cfg(test)]
