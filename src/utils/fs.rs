@@ -13,6 +13,11 @@ pub fn create_dir_all<P: AsRef<Path>>(path: P) -> Result<()> {
     fs::create_dir_all(path).with_context(|| format!("failed to create directory {:?}", path))
 }
 
+pub fn remove_dir_all<P: AsRef<Path>>(path: P) -> Result<()> {
+    let path = path.as_ref();
+    fs::remove_dir_all(path).with_context(|| format!("failed to remove directory {:?}", path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -142,13 +142,13 @@ impl NotifyListener {
 
     pub fn close(&self) -> Result<()> {
         close(self.fd)?;
-        std::fs::remove_file(&self.socket_path)?;
         Ok(())
     }
 }
 
 pub struct NotifySocket {
     fd: RawFd,
+    socket_path: PathBuf,
 }
 
 impl NotifySocket {
@@ -161,7 +161,10 @@ impl NotifySocket {
         )?;
         let sockaddr = socket::SockAddr::new_unix(Path::new(socket_path))?;
         socket::connect(raw_fd, &sockaddr)?;
-        Ok(NotifySocket { fd: raw_fd })
+        Ok(NotifySocket {
+            fd: raw_fd,
+            socket_path: socket_path.to_path_buf(),
+        })
     }
 
     pub fn notify(&self, msg: &str) -> Result<()> {
@@ -173,6 +176,7 @@ impl NotifySocket {
     }
 
     pub fn close(&self) -> Result<()> {
+        std::fs::remove_file(&self.socket_path)?;
         Ok(close(self.fd)?)
     }
 }
@@ -197,7 +201,7 @@ mod tests {
     #[test]
     fn test_notifysocket() {
         let socket_path = Path::new("/opt/test.sock");
-        let mut notify_listener = NotifyListener::new(socket_path).unwrap();
+        let notify_listener = NotifyListener::new(socket_path).unwrap();
         let _ = std::thread::spawn(move || {
             std::thread::sleep_ms(1000);
             let notify_socket = NotifySocket::new(socket_path).unwrap();

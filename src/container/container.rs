@@ -1,15 +1,15 @@
 use super::state::{State, Status};
-use crate::oci::oci::{Namespace, Spec};
+use crate::oci::oci::{Namespace, NamespaceType, Spec};
 use crate::utils::fork::fork_child;
 use crate::utils::fs;
 use crate::utils::ipc;
 use crate::utils::ipc::{NotifyListener, NotifySocket};
 use crate::utils::ipc::{Reader, Writer};
 use anyhow::{bail, Result};
+use nix::mount::{mount, umount2, MntFlags, MsFlags};
 use nix::sched::{unshare, CloneFlags};
 use nix::sys::wait::waitpid;
-use nix::unistd::execv;
-use nix::unistd::sethostname;
+use nix::unistd::{chdir, execv, pivot_root, sethostname};
 use std::ffi::CString;
 use std::{path::Path, path::PathBuf};
 
@@ -77,7 +77,7 @@ impl Container {
         Ok(container)
     }
 
-    fn with_bundle(mut self, bundle: PathBuf) -> Self {
+    fn set_bundle(mut self, bundle: PathBuf) -> Self {
         self.bundle = bundle;
         self
     }
@@ -104,12 +104,11 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
-        let pid = fork_child(|| init_process(&w_ipc, &notify_listener, &namespaces))?;
+        let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
         let msg = r_ipc.read()?;
         if msg != "ready" {
             bail!("not ready");
         }
-
         let mut state = State::new(&self.container_id, pid.as_raw(), self.bundle);
         state.status = Status::Created;
         let container = ContainerInstance::new(state, &container_dir);
@@ -123,18 +122,65 @@ impl Container {
 
 fn init_process(
     w: &Writer<String>,
+    spec: &Spec,
     notify_listener: &NotifyListener,
     namespaces: &Vec<Namespace>,
 ) -> Result<()> {
     for v in namespaces.iter() {
-        println!("{:?}", v.typ);
+        match v.typ {
+            NamespaceType::Uts => {
+                unshare(CloneFlags::CLONE_NEWUTS)?;
+                sethostname("container")?;
+            }
+            NamespaceType::Ipc => {
+                unshare(CloneFlags::CLONE_NEWIPC)?;
+            }
+            NamespaceType::User => {
+                unshare(CloneFlags::CLONE_NEWUSER)?;
+            }
+            NamespaceType::Mount => {
+                unshare(CloneFlags::CLONE_NEWNS)?;
+                let ref rootfs = spec.root.as_ref().unwrap().path;
+                prepare_roofs(rootfs)?;
+                pivot_rootfs(rootfs)?;
+            }
+            NamespaceType::Network => {
+                unshare(CloneFlags::CLONE_NEWNET)?;
+            }
+            _ => {}
+        }
     }
-    unshare(CloneFlags::CLONE_NEWUTS)?;
-    sethostname("container")?;
     w.write("ready".to_owned())?;
     notify_listener.wait_container_start()?;
-    notify_listener.close()?;
     do_exec("/bin/sh")?;
+    Ok(())
+}
+
+//准备文件系统
+fn prepare_roofs(rootfs: &Path) -> Result<()> {
+    //https://man7.org/linux/man-pages/man2/pivot_root.2.html
+    mount::<str, str, str, str>(None, "/", None, MsFlags::MS_PRIVATE | MsFlags::MS_REC, None)?;
+    //  we need this to satisfy restriction:
+    // "new_root and put_old must not be on the same filesystem as the current root"
+    mount::<Path, Path, str, str>(
+        Some(rootfs),
+        rootfs,
+        None,
+        MsFlags::MS_BIND | MsFlags::MS_REC,
+        None,
+    )?;
+    Ok(())
+}
+
+//povit_root的新目录不能和原来的root目录在一个文件系统上
+fn pivot_rootfs(rootfs: &Path) -> Result<()> {
+    chdir(rootfs)?;
+    let old_root = rootfs.join("oldroot");
+    fs::create_dir_all(&old_root)?;
+    pivot_root(rootfs.as_os_str(), old_root.as_os_str())?;
+    umount2("./oldroot", MntFlags::MNT_DETACH)?;
+    fs::remove_dir_all("./oldroot")?;
+    chdir("/")?;
     Ok(())
 }
 

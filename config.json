@@ -51,7 +51,7 @@
 		"noNewPrivileges": true
 	},
 	"root": {
-		"path": "rootfs",
+		"path": "/opt/mycontainer/rootfs",
 		"readonly": true
 	},
 	"hostname": "runc",

@@ -1,3 +1,5 @@
+use super::oci_error;
+use super::OciError;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -20,9 +22,9 @@ impl Spec {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Root {
-    pub path: String,
+    pub path: PathBuf,
     pub readonly: bool,
 }
 
@@ -33,15 +35,38 @@ pub struct Linux {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum NamespaceType {
+    Mount,
+    Cgroup,
+    Uts,
+    Ipc,
+    User,
+    Pid,
+    Network,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Namespace {
     #[serde(rename = "type")]
     pub typ: NamespaceType,
     pub path: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum NamespaceType {
-    Mount,
+impl TryFrom<&str> for NamespaceType {
+    type Error = OciError;
+    fn try_from(namespace: &str) -> std::result::Result<Self, Self::Error> {
+        match namespace {
+            "pid" => Ok(NamespaceType::Pid),
+            "mount" => Ok(NamespaceType::Mount),
+            "cgroup" => Ok(NamespaceType::Cgroup),
+            "uts" => Ok(NamespaceType::Uts),
+            "ipc" => Ok(NamespaceType::Ipc),
+            "user" => Ok(NamespaceType::User),
+            "network" => Ok(NamespaceType::Network),
+            _ => Err(oci_error(format!("unknown namespace {}", namespace))),
+        }
+    }
 }
 
 #[cfg(test)]
