@@ -117,7 +117,9 @@ impl Container {
         Ok(())
     }
 
-    fn with_root() {}
+    pub fn run(self) -> Result<()> {
+        Ok(())
+    }
 }
 
 fn init_process(
