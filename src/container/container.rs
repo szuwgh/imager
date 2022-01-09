@@ -1,4 +1,5 @@
 use super::state::{State, Status};
+use crate::cgroups::v1;
 use crate::oci::oci::{Namespace, NamespaceType, Spec};
 use crate::utils::fork::fork_child;
 use crate::utils::fs;
@@ -104,6 +105,7 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
+        //v1::get_subsystem_mount_point();
         let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
         let msg = r_ipc.read()?;
         if msg != "ready" {
