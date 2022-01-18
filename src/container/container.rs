@@ -9,12 +9,14 @@ use crate::utils::ipc::{Reader, Writer};
 use anyhow::{bail, Result};
 use nix::mount::{mount, umount2, MntFlags, MsFlags};
 use nix::sched::{unshare, CloneFlags};
+use nix::sys::statfs::statfs;
 use nix::sys::wait::waitpid;
 use nix::unistd::{chdir, execv, pivot_root, sethostname};
 use std::ffi::CString;
 use std::{path::Path, path::PathBuf};
 
 const SOCK_FILE: &'static str = "smog.sock";
+pub const DEFAULT_CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 pub struct ContainerInstance {
     state: State,
@@ -105,7 +107,21 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
-        let manager = CgroupsManager::new(&self.container_id);
+        // let manager = CgroupsManager::new(&self.container_id);
+
+        let default_root = Path::new(DEFAULT_CGROUP_ROOT);
+        match default_root.exists() {
+            true => {
+                // If the filesystem is of type cgroup2, the system is in unified mode.
+                // If the filesystem is tmpfs instead the system is either in legacy or
+                // hybrid mode. If a cgroup2 filesystem has been mounted under the "unified"
+                // folder we are in hybrid mode, otherwise we are in legacy mode.
+                let stat = statfs(default_root)?;
+                println!("filesystem_type: {:?}", stat.filesystem_type());
+            }
+            false => {}
+        }
+
         let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
         let msg = r_ipc.read()?;
         if msg != "ready" {

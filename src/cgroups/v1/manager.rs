@@ -4,6 +4,8 @@ use procfs::process::Process;
 
 use std::{collections::HashMap, path::PathBuf};
 
+
+
 pub struct CgroupsManager {
     subsystems: HashMap<SubSystemType, PathBuf>,
 }
@@ -26,8 +28,10 @@ impl CgroupsManager {
     }
 }
 
-// 当要向某个 CGroup 加入 Thread 时，将Thread PID 写入 tasks 或 cgroup.procs 即可，cgroup.procs 会自动变更为该 Task 所属的 Proc PID。
-// 如果要加入 Proc 时，则只能写入到 cgroup.procs 文件(未解)，tasks 文件会自动更新为该 Proc 下所有的 Thread PID。
+// 当要向某个 CGroup 加入 Thread 时，将Thread PID 写入 tasks 或 cgroup.procs 即可，
+// cgroup.procs 会自动变更为该 Task 所属的 Proc PID。
+// 如果要加入 Proc 时，则只能写入到 cgroup.procs 文件(未解)，tasks 文件会自动更新为该
+// Proc 下所有的 Thread PID。
 // 可以通过cat /proc/PID/cgroup查看某个 Proc/Thread 的 CGroup 信息
 pub fn get_subsystem_mount_point(subsystem: &SubSystemType) -> Result<PathBuf> {
     let subsystem = subsystem.to_string();

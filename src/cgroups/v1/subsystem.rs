@@ -1,4 +1,5 @@
 use std::fmt::Display;
+
 // root@vm:~# lssubsys -a
 // cpuset
 // cpu
@@ -54,6 +55,7 @@ impl Display for SubSystemType {
     }
 }
 
+#[allow(dead_code)]
 pub const SUBSYSTEMLIST: &[SubSystemType] = &[
     SubSystemType::CpuSet,
     SubSystemType::Cpu,
@@ -70,3 +72,7 @@ pub const SUBSYSTEMLIST: &[SubSystemType] = &[
     SubSystemType::Rdma,
     SubSystemType::Misc,
 ];
+
+trait SubSystem {
+    fn add_task() {}
+}
