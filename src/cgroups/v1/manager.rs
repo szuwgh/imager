@@ -1,11 +1,10 @@
 use super::subsystem::{SubSystemType, SUBSYSTEMLIST};
+use crate::utils::fs;
 use anyhow::{anyhow, bail, Result};
 use procfs::process::Process;
 
+use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
-
-
-
 pub struct CgroupsManager {
     subsystems: HashMap<SubSystemType, PathBuf>,
 }
@@ -24,6 +23,8 @@ impl CgroupsManager {
 
     fn get_subsystem_path(subsystem: &SubSystemType) {
         let mount_point = get_subsystem_mount_point(subsystem).unwrap();
+        let p = mount_point.join(Path::new("a"));
+        fs::create_dir_all(p).unwrap();
         println!("mount_point: {:?}", mount_point);
     }
 }
@@ -39,8 +40,6 @@ pub fn get_subsystem_mount_point(subsystem: &SubSystemType) -> Result<PathBuf> {
         .mountinfo()?
         .into_iter()
         .find(|m| {
-            println!("mount_point: {:?}", m.mount_point);
-            println!("fs_type: {:?}", m.fs_type);
             if m.fs_type == "cgroup" {
                 // Some systems mount net_prio and net_cls in the same directory
                 // other systems mount them in their own diretories. This
