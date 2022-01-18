@@ -14,9 +14,14 @@ pub struct CgroupsManager {
 
 impl CgroupsManager {
     pub fn new(container_id: &str) -> CgroupsManager {
+        let mut subsystems: HashMap<SubSystemType, PathBuf> = HashMap::new();
         let cgroups_path = PathBuf::from(format!("/{}/{}", root, container_id));
         for subsystem in SUBSYSTEMLIST {
-            Self::get_subsystem_path(&cgroups_path, &subsystem);
+            if let Ok(subsystem_path) = Self::get_subsystem_path(&cgroups_path, &subsystem) {
+                subsystems.insert(subsystem.clone(), subsystem_path);
+            } else {
+                log::warn!("cgroup {} not supported on this system", subsystem);
+            }
         }
         Self {
             subsystems: HashMap::new(),
