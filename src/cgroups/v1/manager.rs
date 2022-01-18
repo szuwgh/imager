@@ -5,14 +5,18 @@ use procfs::process::Process;
 
 use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
+
+const root: &str = "smog";
+
 pub struct CgroupsManager {
     subsystems: HashMap<SubSystemType, PathBuf>,
 }
 
 impl CgroupsManager {
     pub fn new(container_id: &str) -> CgroupsManager {
+        let cgroups_path = PathBuf::from(format!("/{}/{}", root, container_id));
         for subsystem in SUBSYSTEMLIST {
-            Self::get_subsystem_path(&subsystem);
+            Self::get_subsystem_path(&cgroups_path, &subsystem);
         }
         Self {
             subsystems: HashMap::new(),
@@ -21,11 +25,10 @@ impl CgroupsManager {
 
     fn add_task() {}
 
-    fn get_subsystem_path(subsystem: &SubSystemType) {
+    fn get_subsystem_path(path: &Path, subsystem: &SubSystemType) -> Result<PathBuf> {
         let mount_point = get_subsystem_mount_point(subsystem).unwrap();
-        let p = mount_point.join(Path::new("a"));
-        fs::create_dir_all(p).unwrap();
-        println!("mount_point: {:?}", mount_point);
+        let p = mount_point.join(path);
+        Ok(p)
     }
 }
 
