@@ -3,10 +3,9 @@ use crate::utils::fs;
 use anyhow::{anyhow, bail, Result};
 use procfs::process::Process;
 
+use crate::cgroups::SMOG;
 use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
-
-const root: &str = "smog";
 
 pub struct CgroupsManager {
     subsystems: HashMap<SubSystemType, PathBuf>,
@@ -15,16 +14,16 @@ pub struct CgroupsManager {
 impl CgroupsManager {
     pub fn new(container_id: &str) -> CgroupsManager {
         let mut subsystems: HashMap<SubSystemType, PathBuf> = HashMap::new();
-        let cgroups_path = PathBuf::from(format!("/{}/{}", root, container_id));
+        let cgroups_path = PathBuf::from(format!("/{}/{}", SMOG, container_id));
         for subsystem in SUBSYSTEMLIST {
             if let Ok(subsystem_path) = Self::get_subsystem_path(&cgroups_path, &subsystem) {
                 subsystems.insert(subsystem.clone(), subsystem_path);
             } else {
-                log::warn!("cgroup {} not supported on this system", subsystem);
+                println!("cgroup {} not supported on this system", subsystem);
             }
         }
         Self {
-            subsystems: HashMap::new(),
+            subsystems: subsystems,
         }
     }
 
@@ -37,11 +36,6 @@ impl CgroupsManager {
     }
 }
 
-// 当要向某个 CGroup 加入 Thread 时，将Thread PID 写入 tasks 或 cgroup.procs 即可，
-// cgroup.procs 会自动变更为该 Task 所属的 Proc PID。
-// 如果要加入 Proc 时，则只能写入到 cgroup.procs 文件(未解)，tasks 文件会自动更新为该
-// Proc 下所有的 Thread PID。
-// 可以通过cat /proc/PID/cgroup查看某个 Proc/Thread 的 CGroup 信息
 pub fn get_subsystem_mount_point(subsystem: &SubSystemType) -> Result<PathBuf> {
     let subsystem = subsystem.to_string();
     Process::myself()?
