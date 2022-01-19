@@ -34,6 +34,38 @@ pub struct Linux {
     pub namespaces: Option<Vec<Namespace>>,
 }
 
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinuxResources {
+    pub cpu: Option<LinuxCpu>,
+    pub memory: Option<LinuxMemory>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinuxCpu {
+    shares: Option<u64>,
+    quota: Option<i64>,
+    period: Option<u64>,
+    realtime_runtime: Option<i64>,
+    realtime_period: Option<u64>,
+    cpus: Option<String>,
+    mems: Option<String>,
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinuxMemory {
+    limit: Option<i64>,
+    reservation: Option<i64>,
+    swap: Option<i64>,
+    kernel: Option<i64>,
+    kernel_tcp: Option<i64>,
+    swappiness: Option<u64>,
+    disable_oom_killer: Option<bool>,
+    use_hierarchy: Option<bool>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum NamespaceType {
