@@ -48,8 +48,6 @@ pub const SUBSYSTEMLIST: &[SubSystemType] = &[
     SubSystemType::Pids,
 ];
 
-trait SubSystem {
-    fn add_task() {}
-
+pub trait SubSystem {
     fn apply() {}
 }

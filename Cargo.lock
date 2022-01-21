@@ -301,19 +301,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rsrun"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap",
- "libc",
- "nix",
- "procfs",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -348,6 +335,19 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "smog"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "libc",
+ "nix",
+ "procfs",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

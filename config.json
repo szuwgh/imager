@@ -138,7 +138,25 @@
 					"allow": false,
 					"access": "rwm"
 				}
-			]
+			],
+			"memory": {
+				"limit": 134217728,
+				"reservation": 134217728,
+				"swap": 134217728,
+				"kernel": -1,
+				"kernelTCP": -1,
+				"swappiness": 0,
+				"disableOOMKiller": false
+			},
+			"cpu": {
+				"shares": 1024,
+				"quota": 1000000,
+				"period": 500000,
+				"realtimeRuntime": 950000,
+				"realtimePeriod": 1000000,
+				"cpus": "2-3",
+				"mems": "0-7"
+			}
 		},
 		"namespaces": [
 			{

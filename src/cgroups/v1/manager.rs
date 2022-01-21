@@ -7,12 +7,12 @@ use crate::cgroups::SMOG;
 use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
 
-pub struct CgroupsManager {
+pub struct Manager {
     subsystems: HashMap<SubSystemType, PathBuf>,
 }
 
-impl CgroupsManager {
-    pub fn new(container_id: &str) -> CgroupsManager {
+impl Manager {
+    pub fn new(container_id: &str) -> Manager {
         let mut subsystems: HashMap<SubSystemType, PathBuf> = HashMap::new();
         let cgroups_path = PathBuf::from(format!("/{}/{}", SMOG, container_id));
         for subsystem in SUBSYSTEMLIST {

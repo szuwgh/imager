@@ -1,5 +1,6 @@
 use super::state::{State, Status};
-use crate::cgroups::v1::manager::CgroupsManager;
+use crate::cgroups::v2::manager::Manager;
+use crate::cgroups::CgroupManager;
 use crate::oci::oci::{Namespace, NamespaceType, Spec};
 use crate::utils::fork::fork_child;
 use crate::utils::fs;
@@ -107,7 +108,7 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
-        // let manager = CgroupsManager::new(&self.container_id);
+        let manager = Manager::new(DEFAULT_CGROUP_ROOT.into(), &self.container_id);
 
         let default_root = Path::new(DEFAULT_CGROUP_ROOT);
         match default_root.exists() {
@@ -123,6 +124,7 @@ impl Container {
         }
 
         let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
+        manager.add_task(pid)?;
         let msg = r_ipc.read()?;
         if msg != "ready" {
             bail!("not ready");
