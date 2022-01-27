@@ -32,6 +32,7 @@ pub struct Root {
 #[serde(rename_all = "camelCase")]
 pub struct Linux {
     pub namespaces: Option<Vec<Namespace>>,
+    pub resources: Option<LinuxResources>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -44,13 +45,13 @@ pub struct LinuxResources {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LinuxCpu {
-    shares: Option<u64>,
-    quota: Option<i64>,
-    period: Option<u64>,
-    realtime_runtime: Option<i64>,
-    realtime_period: Option<u64>,
-    cpus: Option<String>,
-    mems: Option<String>,
+    pub shares: Option<u64>,
+    pub quota: Option<i64>,
+    pub period: Option<u64>,
+    pub realtime_runtime: Option<i64>,
+    pub realtime_period: Option<u64>,
+    pub cpus: Option<String>,
+    pub mems: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

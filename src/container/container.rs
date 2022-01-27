@@ -1,6 +1,7 @@
 use super::state::{State, Status};
-use crate::cgroups::v2::manager::Manager;
 use crate::cgroups::CgroupManager;
+use crate::cgroups::CgroupVersion;
+use crate::cgroups::{v1, v2};
 use crate::oci::oci::{Namespace, NamespaceType, Spec};
 use crate::utils::fork::fork_child;
 use crate::utils::fs;
@@ -11,6 +12,7 @@ use anyhow::{bail, Result};
 use nix::mount::{mount, umount2, MntFlags, MsFlags};
 use nix::sched::{unshare, CloneFlags};
 use nix::sys::statfs::statfs;
+use nix::sys::statfs::{CGROUP2_SUPER_MAGIC, TMPFS_MAGIC};
 use nix::sys::wait::waitpid;
 use nix::unistd::{chdir, execv, pivot_root, sethostname};
 use std::ffi::CString;
@@ -108,20 +110,7 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
-        let manager = Manager::new(DEFAULT_CGROUP_ROOT.into(), &self.container_id);
-
-        let default_root = Path::new(DEFAULT_CGROUP_ROOT);
-        match default_root.exists() {
-            true => {
-                // If the filesystem is of type cgroup2, the system is in unified mode.
-                // If the filesystem is tmpfs instead the system is either in legacy or
-                // hybrid mode. If a cgroup2 filesystem has been mounted under the "unified"
-                // folder we are in hybrid mode, otherwise we are in legacy mode.
-                let stat = statfs(default_root)?;
-                println!("filesystem_type: {:?}", stat.filesystem_type());
-            }
-            false => {}
-        }
+        let manager = 
 
         let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
         manager.add_task(pid)?;
@@ -140,6 +129,32 @@ impl Container {
     pub fn run(self) -> Result<()> {
         Ok(())
     }
+}
+
+fn get_cgroup_version() -> Result<CgroupVersion> {
+    let default_root = Path::new(DEFAULT_CGROUP_ROOT);
+    return match default_root.exists() {
+        true => {
+            let stat = statfs(default_root)?;
+            match stat.filesystem_type() {
+                CGROUP2_SUPER_MAGIC => Ok(CgroupVersion::V2),
+                TMPFS_MAGIC => Ok(CgroupVersion::V2),
+                _ => bail!("non default cgroup root not supported"),
+            }
+            // println!("filesystem_type: {:?}", stat.filesystem_type());
+        }
+        false => {
+            bail!("non default cgroup root not supported")
+        }
+    };
+}
+
+fn new_cgroup_manager() -> Result<Box<dyn CgroupManager>> {
+   let m= match get_cgroup_version()? {
+        CgroupVersion::V1 => {}
+        CgroupVersion::V2 => Box::new(v2::manager::Manager::new(DEFAULT_CGROUP_ROOT.into(), &self.container_id)),
+    };
+    Ok(m)
 }
 
 fn init_process(

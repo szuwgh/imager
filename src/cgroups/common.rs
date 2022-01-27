@@ -1,9 +1,13 @@
+use crate::oci::oci::LinuxResources;
 use anyhow::Result;
 use std::fs;
 use std::io::Write;
 use std::path::Path;
 
-pub struct ControllerOpt {}
+#[derive(Clone, Debug)]
+pub struct ControllerOpt<'a> {
+    pub resources: &'a LinuxResources,
+}
 
 #[inline]
 pub fn write_cgroup_file_str<P: AsRef<Path>>(path: P, data: &str) -> Result<()> {

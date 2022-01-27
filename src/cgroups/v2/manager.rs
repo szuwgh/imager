@@ -1,5 +1,7 @@
-use super::subsystem::SUBSYSTEMLIST;
+use super::cpu::Cpu;
+use super::subsystem::{SubSystem, SubSystemType, SUBSYSTEMLIST};
 use crate::cgroups::common;
+use crate::cgroups::common::ControllerOpt;
 use crate::cgroups::CgroupManager;
 use crate::cgroups::SMOG;
 use anyhow::Result;
@@ -69,6 +71,16 @@ impl Manager {
 impl CgroupManager for Manager {
     fn add_task(&self, pid: Pid) -> Result<()> {
         self.create_unified_cgroup(pid)?;
+        Ok(())
+    }
+
+    fn apply(&self, controller_opt: &ControllerOpt) -> Result<()> {
+        for controller in SUBSYSTEMLIST {
+            match controller {
+                SubSystemType::Cpu => Cpu::apply(controller_opt, &self.full_path)?,
+                _ => {}
+            }
+        }
         Ok(())
     }
 }

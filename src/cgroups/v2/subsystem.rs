@@ -1,20 +1,8 @@
+use crate::cgroups::common::ControllerOpt;
+use anyhow::Result;
 use std::fmt::Display;
+use std::path::Path;
 
-// root@vm:~# lssubsys -a
-// cpuset
-// cpu
-// cpuacct
-// blkio
-// memory
-// devices
-// freezer
-// net_cls
-// perf_event
-// net_prio
-// hugetlb
-// pids
-// rdma
-// misc
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum SubSystemType {
     Cpu,
@@ -49,5 +37,5 @@ pub const SUBSYSTEMLIST: &[SubSystemType] = &[
 ];
 
 pub trait SubSystem {
-    fn apply() {}
+    fn apply(controller_opt: &ControllerOpt, cgroup_path: &Path) -> Result<()>;
 }
