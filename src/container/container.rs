@@ -1,4 +1,5 @@
 use super::state::{State, Status};
+use crate::cgroups::common::ControllerOpt;
 use crate::cgroups::CgroupManager;
 use crate::cgroups::CgroupVersion;
 use crate::cgroups::{v1, v2};
@@ -8,21 +9,21 @@ use crate::utils::fs;
 use crate::utils::ipc;
 use crate::utils::ipc::{NotifyListener, NotifySocket};
 use crate::utils::ipc::{Reader, Writer};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use nix::mount::{mount, umount2, MntFlags, MsFlags};
 use nix::sched::{unshare, CloneFlags};
 use nix::sys::statfs::statfs;
 use nix::sys::statfs::{CGROUP2_SUPER_MAGIC, TMPFS_MAGIC};
-use nix::sys::wait::waitpid;
+use nix::unistd::Pid;
+
 use nix::unistd::{chdir, execv, pivot_root, sethostname};
 use std::ffi::CString;
 use std::{path::Path, path::PathBuf};
-
 const SOCK_FILE: &'static str = "smog.sock";
 pub const DEFAULT_CGROUP_ROOT: &str = "/sys/fs/cgroup";
 
 pub struct ContainerInstance {
-    state: State,
+    pub state: State,
     dir: PathBuf,
 }
 
@@ -100,8 +101,11 @@ impl Container {
         Ok(dir)
     }
 
-    pub fn create(self) -> Result<()> {
+    pub fn create(self) -> Result<(ContainerInstance, Pid)> {
         let spec = self.load_spec()?;
+        //spec.linux.and_then()
+        let linux = spec.linux.as_ref().context("no linux in spec")?;
+
         let container_dir = self.create_container_dir()?;
         let sock_path = container_dir.join(SOCK_FILE);
         let notify_listener = NotifyListener::new(&sock_path)?;
@@ -110,10 +114,13 @@ impl Container {
             Some(linux) => linux.namespaces.clone().unwrap_or(Vec::new()),
             None => Vec::new(),
         };
-        let manager = 
+        let manager = new_cgroup_manager(&self.container_id)?;
 
         let pid = fork_child(|| init_process(&w_ipc, &spec, &notify_listener, &namespaces))?;
         manager.add_task(pid)?;
+        if let Some(r) = linux.resources.as_ref() {
+            manager.apply(&ControllerOpt { resources: r })?;
+        }
         let msg = r_ipc.read()?;
         if msg != "ready" {
             bail!("not ready");
@@ -122,8 +129,7 @@ impl Container {
         state.status = Status::Created;
         let container = ContainerInstance::new(state, &container_dir);
         container.save()?;
-        waitpid(pid, None)?;
-        Ok(())
+        Ok((container, pid))
     }
 
     pub fn run(self) -> Result<()> {
@@ -141,7 +147,6 @@ fn get_cgroup_version() -> Result<CgroupVersion> {
                 TMPFS_MAGIC => Ok(CgroupVersion::V2),
                 _ => bail!("non default cgroup root not supported"),
             }
-            // println!("filesystem_type: {:?}", stat.filesystem_type());
         }
         false => {
             bail!("non default cgroup root not supported")
@@ -149,10 +154,13 @@ fn get_cgroup_version() -> Result<CgroupVersion> {
     };
 }
 
-fn new_cgroup_manager() -> Result<Box<dyn CgroupManager>> {
-   let m= match get_cgroup_version()? {
-        CgroupVersion::V1 => {}
-        CgroupVersion::V2 => Box::new(v2::manager::Manager::new(DEFAULT_CGROUP_ROOT.into(), &self.container_id)),
+fn new_cgroup_manager(container_id: &str) -> Result<Box<dyn CgroupManager>> {
+    let m: Box<dyn CgroupManager> = match get_cgroup_version()? {
+        CgroupVersion::V1 => Box::new(v1::manager::Manager::new(container_id)),
+        CgroupVersion::V2 => Box::new(v2::manager::Manager::new(
+            DEFAULT_CGROUP_ROOT.into(),
+            container_id,
+        )),
     };
     Ok(m)
 }

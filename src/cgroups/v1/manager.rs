@@ -1,12 +1,13 @@
 use super::subsystem::{SubSystemType, SUBSYSTEMLIST};
+use crate::cgroups::common::ControllerOpt;
+use crate::cgroups::CgroupManager;
+use crate::cgroups::SMOG;
 use crate::utils::fs;
 use anyhow::{anyhow, bail, Result};
+use nix::unistd::Pid;
 use procfs::process::Process;
-
-use crate::cgroups::SMOG;
 use std::path::Path;
 use std::{collections::HashMap, path::PathBuf};
-
 pub struct Manager {
     subsystems: HashMap<SubSystemType, PathBuf>,
 }
@@ -69,4 +70,21 @@ pub fn get_subsystem_mount_point(subsystem: &SubSystemType) -> Result<PathBuf> {
         })
         .map(|m| m.mount_point)
         .ok_or_else(|| anyhow!("could not find mountpoint for {}", subsystem))
+}
+
+impl CgroupManager for Manager {
+    fn add_task(&self, pid: Pid) -> Result<()> {
+        //self.create_unified_cgroup(pid)?;
+        Ok(())
+    }
+
+    fn apply(&self, controller_opt: &ControllerOpt) -> Result<()> {
+        // for controller in SUBSYSTEMLIST {
+        //     match controller {
+        //         SubSystemType::Cpu => Cpu::apply(controller_opt, &self.full_path)?,
+        //         _ => {}
+        //     }
+        // }
+        Ok(())
+    }
 }

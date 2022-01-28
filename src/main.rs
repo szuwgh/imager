@@ -1,13 +1,13 @@
+mod cgroups;
 mod cli;
 mod common;
 mod container;
 mod oci;
 mod opts;
 mod utils;
-mod cgroups;  
 use clap::Parser;
-use cli::{Create, Start};
-use opts::{create, start};  
+use cli::{Create, Run, Start};
+use opts::{create, run, start};
 
 #[derive(Parser, Debug)]
 #[clap(about, version, author)]
@@ -20,7 +20,7 @@ struct Opts {
 enum SubCommand {
     Create(Create),
     Start(Start),
-    Run,
+    Run(Run),
     Spec,
 }
 
@@ -35,7 +35,9 @@ fn main() {
         SubCommand::Start(s) => {
             start(s).unwrap();
         }
-        SubCommand::Run => {}
+        SubCommand::Run(r) => {
+            run(r).unwrap();
+        }
         SubCommand::Spec => {}
     }
 }
