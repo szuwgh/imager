@@ -25,7 +25,6 @@ impl Manager {
     pub fn new(root_path: PathBuf, container_id: &str) -> Manager {
         let cgroups_path = PathBuf::from(format!("{}/{}", SMOG, container_id));
         let full_path = root_path.join(&cgroups_path);
-        println!("full_path:{:?} ", full_path);
         Self {
             root_path: root_path,
             cgroups_path: cgroups_path,

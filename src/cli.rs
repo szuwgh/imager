@@ -27,3 +27,9 @@ pub struct Run {
     #[clap(forbid_empty_values = true, required = true)]
     pub container_id: String,
 }
+
+#[derive(Parser, Debug)]
+pub struct Exec {
+    #[clap(forbid_empty_values = true, required = true)]
+    pub container_id: String,
+}
